@@ -16,7 +16,7 @@ Skillinfytech_internship/
 │   ├── expense_tracker.py      # CLI tool for logging expenses and generating CSV reports
 │   └── expenses.csv            # Local persistent data storage
 │
-└── inventory_system/
+└── inventory_management_app/
     ├── inventory_management.py # Streamlit web app with sidebar menu and custom metrics
     └── inventory.csv           # Persistent local stock records
 
@@ -77,7 +77,7 @@ streamlit run expense_tracker.py
 
 * **How to Run:**
 ```bash
-cd inventory_system
+cd inventory_management_app
 streamlit run inventory_management.py
 
 ```
