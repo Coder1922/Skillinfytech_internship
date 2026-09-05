@@ -10,7 +10,7 @@ Welcome to my official internship repository for **SkillInfy Tech**! This reposi
 Skillinfytech_internship/
 │
 ├── weather_forecast_app/
-│   └── weather_app.py          # Real-time weather dashboard via OpenWeather API
+│   └── weather_forecast.py          # Real-time weather dashboard via OpenWeather API
 │
 ├── expense_tracker_app/
 │   ├── expense_tracker.py      # CLI tool for logging expenses and generating CSV reports
@@ -41,7 +41,7 @@ Here is the complete `README.md` text formatted in a clean code block so you can
 * **How to Run:**
 ```bash
 cd weather_forecast_app
-streamlit run weather_app.py
+streamlit run weather_forecast.py
 
 ```
 
