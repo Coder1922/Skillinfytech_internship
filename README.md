@@ -59,7 +59,7 @@ streamlit run weather_forecast.py
 * **How to Run:**
 ```bash
 cd expense_tracker_app
-python expense_tracker.py
+streamlit run expense_tracker.py
 
 ```
 
