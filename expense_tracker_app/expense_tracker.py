@@ -1,139 +1,159 @@
 import csv
 import os
 from datetime import datetime
+import pandas as pd
+import streamlit as st
 
+# Page Configuration
+st.set_page_config(
+    page_title="Expense Tracker Hub", page_icon="💰", layout="centered"
+)
+
+# Custom CSS to reduce whitespace and style metrics
+st.markdown(
+    """
+    <style>
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+        div.stMetric {
+            background-color: rgba(128, 128, 128, 0.05);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(128, 128, 128, 0.1);
+        }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
+# File Setup
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-FILE_NAME = os.path.join(SCRIPT_DIR, 'expenses.csv')
+FILE_NAME = os.path.join(SCRIPT_DIR, "expenses.csv")
+
 
 def initialize_file():
-    """Creates the CSV file with headers if it does not already exist."""
-    if not os.path.exists(FILE_NAME):
-        with open(FILE_NAME, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Date', 'Category', 'Amount', 'Description'])
+  """Creates the CSV file with headers if it does not already exist."""
+  if not os.path.exists(FILE_NAME):
+    with open(FILE_NAME, mode="w", newline="") as file:
+      writer = csv.writer(file)
+      writer.writerow(["Date", "Category", "Amount", "Description"])
 
-def add_expense():
-    """Prompts the user to input an expense and appends it to the CSV."""
-    date = datetime.now().strftime("%Y-%m-%d")
-    category = input("Enter Category (e.g., Food, Travel, Pets): ").strip().title()
-    description = input("Enter Description: ").strip()
-    
-    try:
-        amount = float(input("Enter Amount: "))
-    except ValueError:
-        print("\nError: Please enter a valid number for the amount.")
-        return
 
-    with open(FILE_NAME, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([date, category, amount, description])
-        
-    print(f"\nSuccess: Added ₹{amount} for {category} to your expenses.")
+initialize_file()
 
-def view_expenses():
-    """Reads and displays all recorded expenses."""
-    if not os.path.exists(FILE_NAME):
-        print("\nNo expenses recorded yet.")
-        return
+# App Header
+st.title("💰 Personal Expense Tracker")
+st.markdown("Manage, track, and visualize your daily spending effortlessly.")
+st.markdown("---")
 
-    print("\n--- All Expenses ---")
-    with open(FILE_NAME, mode='r') as file:
-        reader = csv.reader(file)
-        next(reader)  # Skip the header row
-        for row in reader:
-            print(f"Date: {row[0]} | Category: {row[1]} | Amount: ₹{row[2]} | Desc: {row[3]}")
-    print("-" * 20)
+# Navigation Tabs
+tab1, tab2, tab3 = st.tabs(
+    ["➕ Add Expense", "👁️ View & Filter", "📊 Reports & Charts"]
+)
 
-def filter_expenses():
-    """Filters expenses by a specific Date or Category."""
-    if not os.path.exists(FILE_NAME):
-        print("\nNo expenses recorded yet.")
-        return
+# ================= TAB 1: ADD EXPENSE =================
+with tab1:
+  st.subheader("Record a New Expense")
 
-    print("\n--- Filter Expenses ---")
-    print("1. By Date (YYYY-MM-DD)")
-    print("2. By Category")
-    choice = input("Choose filter type (1 or 2): ").strip()
+  with st.form("expense_form", clear_on_submit=True):
+    col1, col2 = st.columns(2)
+    with col1:
+      expense_date = st.date_input("Date", value=datetime.now())
+    with col2:
+      category = st.selectbox(
+          "Category",
+          ["Food", "Travel", "Shopping", "Bills", "Entertainment", "Pets", "Other"],
+      )
 
-    if choice == '1':
-        search_term = input("Enter Date (e.g., 2026-09-03): ").strip()
-        column_index = 0
-    elif choice == '2':
-        search_term = input("Enter Category: ").strip().title()
-        column_index = 1
+    amount = st.number_input("Amount (₹)", min_value=0.0, format="%.2f")
+    description = st.text_input(
+        "Description", placeholder="e.g., Grocery shopping, Uber ride"
+    )
+
+    submitted = st.form_submit_button(
+        "Save Expense", type="primary", width="stretch"
+    )
+
+    if submitted:
+      if amount <= 0:
+        st.warning("⚠️ Please enter an amount greater than zero.")
+      else:
+        date_str = expense_date.strftime("%Y-%m-%d")
+        formatted_category = category.strip().title()
+        clean_desc = description.strip()
+
+        with open(FILE_NAME, mode="a", newline="") as file:
+          writer = csv.writer(file)
+          writer.writerow([date_str, formatted_category, amount, clean_desc])
+
+        st.success(
+            f"Successfully added ₹{amount:.2f} under **{formatted_category}**!"
+        )
+
+# ================= TAB 2: VIEW & FILTER =================
+with tab2:
+  st.subheader("All Recorded Expenses")
+
+  if not os.path.exists(FILE_NAME) or os.stat(FILE_NAME).st_size == 0:
+    st.info("No expenses recorded yet. Switch to the 'Add Expense' tab to start.")
+  else:
+    df = pd.read_csv(FILE_NAME)
+
+    if df.empty:
+      st.info("Your expense log is currently empty.")
     else:
-        print("Invalid choice.")
-        return
+      filter_type = st.radio(
+          "Filter by:", ["All", "Category", "Date"], horizontal=True
+      )
 
-    print(f"\n--- Results for '{search_term}' ---")
-    found = False
-    filtered_total = 0.0
+      filtered_df = df.copy()
+      if filter_type == "Category":
+        selected_cat = st.selectbox(
+            "Select Category", df["Category"].unique()
+        )
+        filtered_df = df[df["Category"] == selected_cat]
+      elif filter_type == "Date":
+        selected_date = st.date_input("Select Date", value=datetime.now())
+        filtered_df = df[df["Date"] == selected_date.strftime("%Y-%m-%d")]
 
-    with open(FILE_NAME, mode='r') as file:
-        reader = csv.reader(file)
-        next(reader)
-        for row in reader:
-            if row[column_index] == search_term:
-                print(f"Date: {row[0]} | Category: {row[1]} | Amount: ₹{row[2]} | Desc: {row[3]}")
-                filtered_total += float(row[2])
-                found = True
-    
-    if found:
-        print("-" * 22)
-        print(f"Total for '{search_term}': ₹{filtered_total:.2f}")
+      total_filtered = filtered_df["Amount"].astype(float).sum()
+      st.metric(
+          label="Total Amount for Selection", value=f"₹{total_filtered:.2f}"
+      )
+
+      st.dataframe(filtered_df, width="stretch")
+
+# ================= TAB 3: REPORTS & CHARTS =================
+with tab3:
+  st.subheader("Spending Breakdown & Analytics")
+
+  if not os.path.exists(FILE_NAME) or os.stat(FILE_NAME).st_size == 0:
+    st.info("No data available to generate reports.")
+  else:
+    df = pd.read_csv(FILE_NAME)
+
+    if df.empty:
+      st.info("Not enough data for reports yet.")
     else:
-        print("No matching expenses found.")
+      df["Amount"] = df["Amount"].astype(float)
+      total_spent = df["Amount"].sum()
 
-def generate_report():
-    """Calculates and displays total spending per category."""
-    if not os.path.exists(FILE_NAME):
-        print("\nNo data available to generate a report.")
-        return
+      category_summary = (
+          df.groupby("Category")["Amount"].sum().reset_index()
+      )
 
-    category_totals = {}
-    total_spent = 0.0
+      st.metric(label="Total Lifetime Spending", value=f"₹{total_spent:.2f}")
+      st.markdown("---")
 
-    with open(FILE_NAME, mode='r') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            amount = float(row['Amount'])
-            category = row['Category']
-            
-            category_totals[category] = category_totals.get(category, 0) + amount
-            total_spent += amount
+      st.markdown("### Spending by Category")
+      if not category_summary.empty:
+        st.bar_chart(
+            category_summary.set_index("Category")["Amount"], color="#4CAF50"
+        )
 
-    print("\n--- Expense Report ---")
-    for category, total in category_totals.items():
-        print(f"{category}: ₹{total:.2f}")
-    print(f"\nTotal Spent: ₹{total_spent:.2f}")
-    print("-" * 22)
-
-def main():
-    initialize_file()
-    
-    while True:
-        print("\n=== Expense Tracker Menu ===")
-        print("1. Add an Expense")
-        print("2. View All Expenses")
-        print("3. Filter Expenses")
-        print("4. Generate Category Report")
-        print("5. Exit")
-        
-        choice = input("Choose an option (1-5): ").strip()
-        
-        if choice == '1':
-            add_expense()
-        elif choice == '2':
-            view_expenses()
-        elif choice == '3':
-            filter_expenses()
-        elif choice == '4':
-            generate_report()
-        elif choice == '5':
-            print("Exiting Expense Tracker. Goodbye!")
-            break
-        else:
-            print("Invalid choice. Please select a number from 1 to 5.")
-
-if __name__ == "__main__":
-    main()
+      st.markdown("### Category Totals Table")
+      st.dataframe(category_summary, width="stretch")
